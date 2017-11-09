@@ -146,7 +146,7 @@ def main():
     rf_params, rf_score = tune_rf()  # warning this method does take a couple minutes to run
     # These are the params it comes up with, if you don't want to run the method, just comment it out and uncomment this
     # and also comment out the if statement below (spoiler random forrest works better than knn)
-    rf_params = {'n_estimators': 700, 'max_features': 'log2', 'min_samples_leaf': 2, 'verbose': 0}
+    # rf_params = {'n_estimators': 700, 'max_features': 'log2', 'min_samples_leaf': 2, 'verbose': 0}
 
     # fitting the best model to all the training data
     model = RandomForestClassifier(**rf_params)
