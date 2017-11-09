@@ -14,7 +14,6 @@ x_train = pd.read_csv('files/train.csv')
 y_train = x_train['Survived']
 
 x_test = pd.read_csv('files/test.csv')
-y_test = pd.read_csv('files/gender_submission.csv')['Survived']
 
 all_data = [x_train, x_test]
 pd_all_data = pd.concat(all_data)
@@ -67,7 +66,6 @@ def clean():
 def feature_selection():
     global x_train
     global x_test
-    global y_test
 
     x_train = x_train.drop(['PassengerId', 'Name', 'Ticket', 'Cabin', 'Parch', 'SibSp', 'Survived'], axis=1)
     x_test = x_test.drop(['PassengerId', 'Name', 'Ticket', 'Cabin', 'Parch', 'SibSp'], axis=1)
@@ -133,7 +131,6 @@ def compare(clf_one, clf_two):
 def main():
     global x_test
     global x_train
-    global y_test
     global y_train
 
     clean()
@@ -144,8 +141,8 @@ def main():
     # finding the best params for both the models
     neighbours, knn_score = tune_knn()
     rf_params, rf_score = tune_rf()  # warning this method does take a couple minutes to run
-    # These are the params it comes up with, if you don't want to run the method, just comment it out and uncomment this
-    # and also comment out the if statement below (spoiler random forrest works better than knn)
+    # These are the params it comes up with, if you don't want to run the method, just comment it out and uncomment
+    # below and also comment out the if statement below (spoiler random forrest works better than knn)
     # rf_params = {'n_estimators': 700, 'max_features': 'log2', 'min_samples_leaf': 2, 'verbose': 0}
 
     # fitting the best model to all the training data
@@ -153,14 +150,12 @@ def main():
     if rf_score <= knn_score:
         model = KNeighborsClassifier(neighbours)
 
+    # finally fit the best model to all the training data and submit the prediction
     model.fit(x_train, y_train)
-
-    print('Final training accuracy', metrics.accuracy_score(y_test, model.predict(x_test)))
-
-    # finally train the model on all the data:
-    x = pd.concat([x_test, x_train])
-    y = pd.concat([y_test, y_train])
-    model.fit(x, y)
+    # Generate Submission File
+    submission = pd.DataFrame({'PassengerId': y_test['PassengerId'],
+                               'Survived': model.predict(x_test)})
+    submission.to_csv("submission.csv", index=False)
 
 
 if __name__ == '__main__':
