@@ -1,29 +1,26 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-
-import warnings
-
-warnings.filterwarnings('ignore')
-
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import cross_val_score
 from sklearn import metrics
 
+import warnings
+
+warnings.filterwarnings('ignore')
+
 x_train = pd.read_csv('files/train.csv')
 y_train = x_train['Survived']
 
 x_test = pd.read_csv('files/test.csv')
-y_test = pd.read_csv('files/gender_submission.csv')
+y_test = pd.read_csv('files/gender_submission.csv')['Survived']
 
 all_data = [x_train, x_test]
 pd_all_data = pd.concat(all_data)
 
 
 # print(train.info())  # this tells me that: age, cabin and embarked have null values
-
-
 def clean():
     global x_train
     global x_test
@@ -40,7 +37,7 @@ def clean():
     x_train['HasCabin'] = x_train['Cabin'].apply(lambda x: 0 if x != x else 1)  # x!= x if value is NaN
     x_test['HasCabin'] = x_test['Cabin'].apply(lambda x: 0 if x != x else 1)
 
-    # fill in embarked null values with most common value
+    # Fill in embarked null values with most common value, because there are so few missing entries
     embarked_mode = pd_all_data['Embarked'].mode()[0]
     x_train['Embarked'] = x_train['Embarked'].fillna(embarked_mode)
     x_test['Embarked'] = x_test['Embarked'].fillna(embarked_mode)
@@ -55,15 +52,15 @@ def clean():
     x_test['Age'] = x_test['Age'].apply(
         lambda x: x if x == x else np.random.randint(mean_age - std_age, mean_age + std_age))
 
-    # mapping sex to value
+    # Mapping sex to value
     x_train['Sex'] = x_train['Sex'].map({'male': 0, 'female': 1})
     x_test['Sex'] = x_test['Sex'].map({'male': 0, 'female': 1})
 
-    # mapping embarked to value
+    # Mapping embarked to value
     x_train['Embarked'] = x_train['Embarked'].map({'S': 0, 'C': 1, 'Q': 2})
     x_test['Embarked'] = x_test['Embarked'].map({'S': 0, 'C': 1, 'Q': 2})
 
-    # single unknown value in of fare in test
+    # Single unknown value in of fare in test
     x_test['Fare'] = x_test['Fare'].fillna(pd_all_data['Fare'].mean())
 
 
@@ -74,7 +71,6 @@ def feature_selection():
 
     x_train = x_train.drop(['PassengerId', 'Name', 'Ticket', 'Cabin', 'Parch', 'SibSp', 'Survived'], axis=1)
     x_test = x_test.drop(['PassengerId', 'Name', 'Ticket', 'Cabin', 'Parch', 'SibSp'], axis=1)
-    y_test = y_test.drop(['PassengerId'], axis=1)
 
 
 def tune_knn():
@@ -122,7 +118,6 @@ def tune_rf():
                 score = cross_val_score(rf, x_train, y_train, cv=10).mean()
                 scores[score] = rf_params
                 print('done training')
-    print(scores[max(scores)])
     return scores[max(scores)], max(scores)  # returns params with max score
 
 
@@ -136,6 +131,11 @@ def compare(clf_one, clf_two):
 
 
 def main():
+    global x_test
+    global x_train
+    global y_test
+    global y_train
+
     clean()
     feature_selection()
     # print(pd_all_data.info())
@@ -144,6 +144,9 @@ def main():
     # finding the best params for both the models
     neighbours, knn_score = tune_knn()
     rf_params, rf_score = tune_rf()  # warning this method does take a couple minutes to run
+    # These are the params it comes up with, if you don't want to run the method, just comment it out and uncomment this
+    # and also comment out the if statement below (spoiler random forrest works better than knn)
+    rf_params = {'n_estimators': 700, 'max_features': 'log2', 'min_samples_leaf': 2, 'verbose': 0}
 
     # fitting the best model to all the training data
     model = RandomForestClassifier(**rf_params)
@@ -155,7 +158,9 @@ def main():
     print('Final training accuracy', metrics.accuracy_score(y_test, model.predict(x_test)))
 
     # finally train the model on all the data:
-    model.fit([x_test, x_train], [y_test, y_train])
+    x = pd.concat([x_test, x_train])
+    y = pd.concat([y_test, y_train])
+    model.fit(x, y)
 
 
 if __name__ == '__main__':
